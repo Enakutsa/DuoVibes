@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuoVibes - Espoir & Gloria</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes heartPop {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(3); opacity: 0.9; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        @keyframes waveIn {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        @keyframes chatPop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes bgFlow {
+            0% { background-position: 0 0; }
+            100% { background-position: 200% 200%; }
+        }
+        .heart-pop { animation: heartPop 0.8s ease-out; }
+        .wave-in { animation: waveIn 0.6s ease-out; }
+        .pulse { animation: pulse 1.5s infinite; }
+        .chat-pop { animation: chatPop 0.3s ease-out; }
+        .button-hover:hover { transform: scale(1.15); transition: transform 0.2s, background 0.3s; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+        .star-favorite { color: gold; animation: heartPop 0.5s; }
+        .card { transition: transform 0.3s, box-shadow 0.3s; }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); }
+        .bg-flow {
+            background: linear-gradient(45deg, rgba(255, 153, 153, 0.3), rgba(107, 114, 128, 0.3), rgba(255, 215, 0, 0.2));
+            background-size: 200% 200%;
+            animation: bgFlow 15s infinite;
+        }
+        .option-selected { border: 3px solid #FF69B4; background: rgba(255, 105, 180, 0.2); transform: scale(1.05); }
+        /* Style de secours */
+        .quiz-option { background: linear-gradient(to right, #E5E7EB, #D1D5DB); padding: 12px; border-radius: 8px; width: 100%; color: #374151; }
+        .submit-answer-btn { background: linear-gradient(to right, #EC4899, #8B5CF6); color: white; padding: 12px 24px; border-radius: 8px; font-size: 18px; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-pink-100 to-purple-100 font-sans relative">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-pink-400 to-purple-500 text-white p-6 flex justify-center items-center shadow-lg">
+        <h1 class="text-4xl font-extrabold pulse">E & G</h1>
+    </header>
+
+    <!-- Main Content -->
+    <main class="p-6 space-y-8 max-w-3xl mx-auto">
+        <!-- Session Join -->
+        <section class="wave-in">
+            <div class="bg-white p-6 rounded-2xl shadow-xl card bg-flow">
+                <h2 class="text-xl font-semibold text-purple-700 mb-4">Rejoignez votre bulle d’amour</h2>
+                <input id="sessionCode" class="w-full p-3 border rounded-lg mb-3 focus:ring-2 focus:ring-pink-300" placeholder="Code (ex. EetG2025)" value="EetG2025">
+                <button id="joinSession" class="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg button-hover">Entrer dans notre monde</button>
+            </div>
+        </section>
+
+        <!-- Stats de couple -->
+        <section class="wave-in">
+            <div class="bg-white p-6 rounded-2xl shadow-xl card bg-flow">
+                <h2 class="text-xl font-semibold text-purple-700 mb-4">Notre score d’amour</h2>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <p class="text-2xl font-bold text-pink-600" id="lovePoints">0</p>
+                        <p class="text-gray-600">Points d’amour</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-purple-600" id="plansCount">0</p>
+                        <p class="text-gray-600">Plans</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-pink-600" id="memoriesCount">0</p>
+                        <p class="text-gray-600">Souvenirs</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Planificateur -->
+        <section class="wave-in">
+            <div class="bg-white p-6 rounded-2xl shadow-xl card bg-flow">
+                <h2 class="text-xl font-semibold text-purple-700 mb-4">Nos prochains rendez-vous</h2>
+                <input id="planTitle" class="w-full p-3 border rounded-lg mb-3 focus:ring-2 focus:ring-pink-300" placeholder="Titre (ex. Soirée Netflix)">
+                <input id="planDate" type="date" class="w-full p-3 border rounded-lg mb-3 focus:ring-2 focus:ring-pink-300">
+                <input id="planLocation" class="w-full p-3 border rounded-lg mb-3 focus:ring-2 focus:ring-pink-300" placeholder="Lieu (ex. Zoom)">
+                <button id="addPlan" class="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg button-hover">Planifier un moment</button>
+            </div>
+            <div id="plansList" class="mt-4 space-y-4"></div>
+        </section>
+
+        <!-- Défi du jour -->
+        <section class="wave-in">
+            <div class="bg-white p-6 rounded-2xl shadow-xl card bg-flow relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-pink-200 to-purple-200 opacity-20"></div>
+                <h2 class="text-xl font-semibold text-purple-700 mb-4">Défi du jour</h2>
+                <h3 class="text-lg font-bold text-pink-600">Envoie un message doux à Gloria !</h3>
+                <p class="text-gray-600">Fais-lui sourire de loin.</p>
+                <button id="acceptChallenge" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg mt-3 button-hover">Relever le défi</button>
+            </div>
+            <div id="challengesList" class="mt-4 space-y-4"></div>
+        </section>
+
+        <!-- Boîte à souvenirs -->
+        <section class="wave-in">
+            <div class="bg-white p-6 rounded-2xl shadow-xl card bg-flow">
+                <h2 class="text-xl font-semibold text-purple-700 mb-4">Nos souvenirs magiques</h2>
+                <textarea id="memoryText" class="w-full p-3 border rounded-lg mb-3 focus:ring-2 focus:ring-pink-300" placeholder="Un instant précieux (ex. Ton rire hier)"></textarea>
+                <button id="addMemory" class="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg button-hover">Chérir ce moment</button>
+            </div>
+            <div id="memoriesList" class="mt-4 space-y-4"></div>
+        </section>
+
+        <!-- Quiz d’Amour -->
+        <section class="wave-in">
+            <div class="bg-white p-6 rounded-2xl shadow-xl card bg-flow relative">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23FF9999%22 stroke-width=%222%22%3E%3Cpath d=%22M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z%22/%3E%3C/svg%3E')] bg-no-repeat bg-[length:40px_40px] opacity-10"></div>
+                <h2 class="text-xl font-semibold text-purple-700 mb-4">Quiz d’Amour</h2>
+                <div id="quiz" class="space-y-4">
+                    <p id="question" class="text-lg font-bold text-pink-600">En attente de la session...</p>
+                    <div id="options" class="space-y-3"></div>
+                    <button id="submitAnswer" class="submit-answer-btn hidden button-hover pulse">Envoyer la réponse</button>
+                    <p id="result" class="text-gray-600 hidden wave-in"></p>
+                    <div id="hearts" class="absolute top-0 left-0 w-full h-full pointer-events-none"></div>
+                </div>
+                <button id="nextQuestion" class="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-6 py-3 rounded-lg mt-3 hidden button-hover text-lg">Question suivante</button>
+                <p class="text-gray-600 mt-3">Score : <span id="score">0</span> points d’amour</p>
+            </div>
+        </section>
+
+        <!-- Chat -->
+        <section class="wave-in">
+            <div class="bg-white p-6 rounded-2xl shadow-xl card bg-flow">
+                <h2 class="text-xl font-semibold text-purple-700 mb-4">Notre coin doux</h2>
+                <div id="chatMessages" class="h-48 overflow-y-auto mb-3 bg-gray-50 p-3 rounded-lg"></div>
+                <input id="chatInput" class="w-full p-3 border rounded-lg mb-3 focus:ring-2 focus:ring-pink-300" placeholder="Un mot d’amour ?">
+                <button id="sendMessage" class="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg button-hover">Envoyer</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Navigation -->
+    <nav class="fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around p-3 shadow-lg">
+        <a href="#" class="text-pink-600 flex flex-col items-center button-hover">
+            <i class="fas fa-home h-6 w-6"></i>
+            <span class="text-sm">Accueil</span>
+        </a>
+        <a href="#" class="text-gray-600 flex flex-col items-center button-hover">
+            <i class="fas fa-calendar h-6 w-6"></i>
+            <span class="text-sm">Plans</span>
+        </a>
+        <a href="#" class="text-gray-600 flex flex-col items-center button-hover">
+            <i class="fas fa-heart h-6 w-6"></i>
+            <span class="text-sm">Souvenirs</span>
+        </a>
+    </nav>
+
+    <!-- JavaScript -->
+    <script>
+        // Données mockées pour tests locaux
+        let plans = [];
+        let memories = [];
+        let localPlans = [];
+        let localMemories = [];
+        let localMessages = [];
+        let lovePoints = 0;
+        let quizScore = 0;
+        let currentQuestion = 0;
+        let selectedAnswer = null;
+        let userName = prompt("Ton prénom (Espoir ou Gloria) ?") || "Anonyme";
+        let sessionRef = null;
+        let firebaseInitialized = false;
+
+        // Questions romantiques
+        const questions = [
+            { question: "Quel est le moment où Espoir a fait battre le cœur de Gloria ?", options: ["Un message tendre", "Un appel surprise", "Un rire partagé", "Un regard doux"], answer: "Un rire partagé" },
+            { question: "Quelle est la petite manie de Gloria qui fait craquer Espoir ?", options: ["Son sourire timide", "Sa façon de parler", "Son clin d’œil", "Sa danse rigolote"], answer: "Son sourire timide" },
+            { question: "Quel endroit rêvez-vous de visiter main dans la main ?", options: ["Paris", "Maldives", "Tokyo", "Venise"], answer: "Venise" },
+            { question: "Quel message d’amour vous êtes-vous envoyé récemment ?", options: ["Je t’aime", "Tu me manques", "T’es mon tout", "À bientôt"], answer: "Tu me manques" },
+            { question: "Quel est votre rituel préféré lors de vos appels vidéo ?", options: ["Rire ensemble", "Chanter", "Parler des rêves", "Se regarder"], answer: "Rire ensemble" },
+            { question: "Quelle chanson vous fait penser l’un à l’autre ?", options: ["Perfect", "All of Me", "Your Song", "Amour éternel"], answer: "All of Me" },
+            { question: "Quel est le geste tendre qui vous fait fondre ?", options: ["Un mot doux", "Un sourire", "Un message surprise", "Un appel"], answer: "Un sourire" },
+            { question: "Quel souvenir d’amour gardez-vous précieusement ?", options: ["Premier message", "Appel mémorable", "Rire partagé", "Moment calme"], answer: "Rire partagé" },
+            { question: "Quel rêve fou partagez-vous pour votre avenir ?", options: ["Voyage mondial", "Maison de rêve", "Amour éternel", "Projet secret"], answer: "Amour éternel" },
+            { question: "Quel compliment d’Espoir fait rougir Gloria ?", options: ["T’es belle", "T’es unique", "T’es mon étoile", "T’es parfaite"], answer: "T’es mon étoile" },
+            { question: "Quel est votre moment le plus drôle ensemble ?", options: ["Blague d’Espoir", "Gaffe de Gloria", "Appel rigolo", "Danse ratée"], answer: "Appel rigolo" },
+            { question: "Quel vœu faites-vous pour votre amour ?", options: ["Toujours rire", "Toujours s’aimer", "Toujours rêver", "Toujours ensemble"], answer: "Toujours ensemble" }
+        ];
+
+        const challenges = [
+            { title: "Selfie à distance", description: "Envoyez-vous un selfie aujourd’hui !" },
+            { title: "Mot d’amour", description: "Écrivez un message qui touche le cœur." }
+        ];
+
+        // Éléments DOM
+        const lovePointsEl = document.getElementById('lovePoints');
+        const plansCountEl = document.getElementById('plansCount');
+        const memoriesCountEl = document.getElementById('memoriesCount');
+        const plansListEl = document.getElementById('plansList');
+        const challengesListEl = document.getElementById('challengesList');
+        const memoriesListEl = document.getElementById('memoriesList');
+        const questionEl = document.getElementById('question');
+        const optionsEl = document.getElementById('options');
+        const submitAnswerBtn = document.getElementById('submitAnswer');
+        const resultEl = document.getElementById('result');
+        const nextQuestionBtn = document.getElementById('nextQuestion');
+        const heartsEl = document.getElementById('hearts');
+        const chatMessagesEl = document.getElementById('chatMessages');
+        const scoreEl = document.getElementById('score');
+
+        // Vérifications DOM
+        if (!scoreEl) console.error("Erreur : 'scoreEl' non trouvé (id='score')");
+        if (!submitAnswerBtn) console.error("Erreur : 'submitAnswerBtn' non trouvé (id='submitAnswer')");
+        if (!optionsEl) console.error("Erreur : 'optionsEl' non trouvé (id='options')");
+
+        // Firebase Config (Remplace par tes clés)
+        const firebaseConfig = {
+  apiKey: "AIzaSy...exemple",
+  authDomain: "duovibes.firebaseapp.com",
+  databaseURL: "https://duovibes-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "duovibes",
+  storageBucket: "duovibes.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
+
+        // Initialiser Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            sessionRef = firebase.database().ref('sessions/EetG2025');
+            firebaseInitialized = true;
+            console.log("Firebase connecté !");
+        } catch (e) {
+            console.error("Erreur Firebase :", e);
+            alert("Firebase non configuré. Mode local activé. Ajoute tes clés Firebase pour jouer en ligne !");
+        }
+
+        // Animation du compteur
+        function animateCounter(el, start, end, duration) {
+            let startTime = null;
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+                el.textContent = Math.floor(progress * (end - start) + start);
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
+        // Afficher les cœurs animés
+        function showHearts(count = 40) {
+            console.log("Affichage de", count, "cœurs");
+            for (let i = 0; i < count; i++) {
+                const heart = document.createElement('span');
+                heart.textContent = '💖';
+                heart.className = 'heart-pop absolute';
+                heart.style.left = `${Math.random() * 100}%`;
+                heart.style.top = `${Math.random() * 100}%`;
+                heart.style.fontSize = `${Math.random() * 30 + 15}px`;
+                heartsEl.appendChild(heart);
+                setTimeout(() => heart.remove(), 800);
+            }
+        }
+
+        // Afficher les plans
+        function renderPlans() {
+            const plansToRender = firebaseInitialized ? plans : localPlans;
+            plansListEl.innerHTML = plansToRender.map(plan => `
+                <div class="bg-white p-4 rounded-2xl shadow-md card wave-in">
+                    <h3 class="text-lg font-bold text-pink-600">${plan.title}</h3>
+                    <p class="text-gray-600">Date : ${plan.date}</p>
+                    <p class="text-gray-600">Lieu : ${plan.location}</p>
+                    <button class="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-3 py-1 rounded-lg mt-2 button-hover">Détails</button>
+                </div>
+            `).join('');
+            plansCountEl.textContent = plansToRender.length;
+            animateCounter(plansCountEl, 0, plansToRender.length, 1000);
+        }
+
+        // Afficher les souvenirs
+        function renderMemories() {
+            const memoriesToRender = firebaseInitialized ? memories : localMemories;
+            memoriesListEl.innerHTML = memoriesToRender.map((memory, index) => `
+                <div class="bg-white p-4 rounded-2xl shadow-md card wave-in flex justify-between items-center">
+                    <div>
+                        <p class="text-pink-600">${memory.text}</p>
+                        <p class="text-gray-600 text-sm">${memory.date}</p>
+                    </div>
+                    <i class="fas fa-star ${memory.favorite ? 'star-favorite' : ''} cursor-pointer" onclick="toggleFavorite(${index})"></i>
+                </div>
+            `).join('');
+            memoriesCountEl.textContent = memoriesToRender.length;
+            animateCounter(memoriesCountEl, 0, memoriesToRender.length, 1000);
+        }
+
+        // Afficher les défis
+        function renderChallenges() {
+            challengesListEl.innerHTML = challenges.map(challenge => `
+                <div class="bg-white p-4 rounded-2xl shadow-md card wave-in">
+                    <h3 class="text-lg font-bold text-purple-600">${challenge.title}</h3>
+                    <p class="text-gray-600">${challenge.description}</p>
+                    <button class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-lg mt-2 button-hover accept-challenge">Accepter</button>
+                </div>
+            `).join('');
+            document.querySelectorAll('.accept-challenge').forEach(btn => {
+                btn.onclick = () => {
+                    btn.innerHTML = '<i class="fas fa-check"></i> Fait !';
+                    btn.classList.remove('bg-gradient-to-r', 'from-purple-500', 'to-pink-500');
+                    btn.classList.add('bg-green-500');
+                    showHearts();
+                    console.log("Défi accepté !");
+                };
+            });
+        }
+
+        // Afficher le chat
+        function renderChat() {
+            chatMessagesEl.innerHTML = localMessages.map(msg => `
+                <p class="chat-pop text-gray-800 bg-pink-100 p-2 rounded-lg mb-1">${msg.user}: ${msg.text}</p>
+            `).join('');
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+        }
+
+        // Rejoindre une session
+        document.getElementById('joinSession').onclick = () => {
+            const sessionCode = document.getElementById('sessionCode').value;
+            console.log("Tentative de rejoindre la session :", sessionCode);
+            if (sessionCode) {
+                if (firebaseInitialized) {
+                    sessionRef = firebase.database().ref(`sessions/${sessionCode}`);
+                    sessionRef.child('users').child(userName).set({ joined: true });
+                    initSession();
+                } else {
+                    alert("Mode local : Session jointe en simulation. Configure Firebase pour jouer en ligne !");
+                    initLocalSession();
+                }
+            }
+        };
+
+        // Initialiser la session Firebase
+        function initSession() {
+            console.log("Initialisation de la session Firebase");
+            if (sessionRef) {
+                sessionRef.child('plans').on('value', snapshot => {
+                    plans = snapshot.val() ? Object.values(snapshot.val()) : [];
+                    renderPlans();
+                });
+
+                sessionRef.child('memories').on('value', snapshot => {
+                    memories = snapshot.val() ? Object.values(snapshot.val()) : [];
+                    renderMemories();
+                });
+
+                sessionRef.child('quiz').on('value', snapshot => {
+                    const quizData = snapshot.val();
+                    if (quizData) {
+                        currentQuestion = quizData.currentQuestion || 0;
+                        quizScore = quizData.score || 0;
+                        if (scoreEl) scoreEl.textContent = quizScore;
+                        lovePoints = quizData.lovePoints || 0;
+                        lovePointsEl.textContent = lovePoints;
+                        loadQuestion();
+                    }
+                });
+
+                sessionRef.child('chat').on('child_added', snapshot => {
+                    const msg = snapshot.val();
+                    localMessages.push(msg);
+                    renderChat();
+                    showHearts(10);
+                });
+            }
+        }
+
+        // Initialiser la session locale
+        function initLocalSession() {
+            console.log("Initialisation de la session locale");
+            renderPlans();
+            renderMemories();
+            renderChat();
+            loadQuestion();
+        }
+
+        // Ajouter un plan
+        document.getElementById('addPlan').onclick = () => {
+            const title = document.getElementById('planTitle').value;
+            const date = document.getElementById('planDate').value;
+            const location = document.getElementById('planLocation').value;
+            console.log("Ajout plan :", { title, date, location });
+            if (title && date && location) {
+                const plan = { title, date, location };
+                if (firebaseInitialized && sessionRef) {
+                    sessionRef.child('plans').push(plan);
+                } else {
+                    localPlans.push(plan);
+                    renderPlans();
+                }
+                document.getElementById('planTitle').value = '';
+                document.getElementById('planDate').value = '';
+                document.getElementById('planLocation').value = '';
+                showHearts();
+            } else {
+                alert("Remplis tous les champs pour ajouter un plan !");
+            }
+        };
+
+        // Ajouter un souvenir
+        document.getElementById('addMemory').onclick = () => {
+            const text = document.getElementById('memoryText').value;
+            console.log("Ajout souvenir :", text);
+            if (text) {
+                const memory = { text, date: new Date().toLocaleDateString(), favorite: false };
+                if (firebaseInitialized && sessionRef) {
+                    sessionRef.child('memories').push(memory);
+                } else {
+                    localMemories.push(memory);
+                    renderMemories();
+                }
+                document.getElementById('memoryText').value = '';
+                showHearts();
+            } else {
+                alert("Écris un souvenir avant d’ajouter !");
+            }
+        };
+
+        // Marquer un souvenir comme favori
+        window.toggleFavorite = (index) => {
+            console.log("Toggle favori :", index);
+            if (firebaseInitialized && sessionRef) {
+                sessionRef.child('memories').once('value', snapshot => {
+                    const mems = snapshot.val();
+                    const keys = Object.keys(mems);
+                    mems[keys[index]].favorite = !mems[keys[index]].favorite;
+                    sessionRef.child('memories').set(mems);
+                    showHearts();
+                });
+            } else {
+                localMemories[index].favorite = !localMemories[index].favorite;
+                renderMemories();
+                showHearts();
+            }
+        };
+
+        // Envoyer un message
+        document.getElementById('sendMessage').onclick = () => {
+            const text = document.getElementById('chatInput').value;
+            console.log("Envoi message :", text);
+            if (text) {
+                const msg = { user: userName, text };
+                if (firebaseInitialized && sessionRef) {
+                    sessionRef.child('chat').push(msg);
+                } else {
+                    localMessages.push(msg);
+                    renderChat();
+                }
+                document.getElementById('chatInput').value = '';
+                showHearts(10);
+            } else {
+                alert("Écris un message avant d’envoyer !");
+            }
+        };
+
+        // Accepter le défi
+        document.getElementById('acceptChallenge').onclick = () => {
+            const btn = document.getElementById('acceptChallenge');
+            btn.innerHTML = '<i class="fas fa-check"></i> Fait !';
+            btn.classList.remove('bg-gradient-to-r', 'from-purple-500', 'to-pink-500');
+            btn.classList.add('bg-green-500');
+            showHearts();
+            console.log("Défi du jour accepté !");
+        };
+
+        // Quiz d’Amour
+        function loadQuestion() {
+            console.log("Chargement question :", currentQuestion);
+            if (currentQuestion >= questions.length) {
+                questionEl.textContent = 'Quiz terminé !';
+                optionsEl.innerHTML = '';
+                resultEl.textContent = `Score final : ${quizScore} points d’amour. Vous êtes l’amour parfait, Espoir & Gloria ! 💖`;
+                resultEl.classList.remove('hidden');
+                submitAnswerBtn.classList.add('hidden');
+                nextQuestionBtn.classList.add('hidden');
+                showHearts(60);
+                return;
+            }
+            const q = questions[currentQuestion];
+            questionEl.textContent = q.question;
+            optionsEl.innerHTML = q.options.map(option => `
+                <button class="quiz-option w-full text-gray-800 button-hover">${option}</button>
+            `).join('');
+            resultEl.classList.add('hidden');
+            submitAnswerBtn.classList.add('hidden');
+            nextQuestionBtn.classList.add('hidden');
+            selectedAnswer = null;
+
+            // Attacher les événements après le rendu
+            document.querySelectorAll('.quiz-option').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    console.log("Option cliquée :", btn.textContent);
+                    selectedAnswer = btn.textContent;
+                    document.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('option-selected'));
+                    btn.classList.add('option-selected');
+                    if (submitAnswerBtn) {
+                        submitAnswerBtn.classList.remove('hidden');
+                        console.log("Bouton 'Envoyer' affiché");
+                    } else {
+                        console.error("Erreur : submitAnswerBtn est null");
+                    }
+                });
+            });
+            console.log("Question chargée :", q.question);
+        }
+
+        submitAnswerBtn.onclick = () => {
+            if (!selectedAnswer) {
+                alert("Choisis une réponse avant d’envoyer !");
+                return;
+            }
+            console.log("Envoi réponse :", selectedAnswer);
+            checkAnswer(selectedAnswer);
+        };
+
+        function checkAnswer(answer) {
+            console.log("Vérification réponse :", answer);
+            if (firebaseInitialized && sessionRef) {
+                sessionRef.child('quiz/answers').child(userName).set(answer);
+                sessionRef.child('quiz/answers').once('value', snapshot => {
+                    const answers = snapshot.val();
+                    if (answers && Object.keys(answers).length === 2) {
+                        const q = questions[currentQuestion];
+                        resultEl.classList.remove('hidden');
+                        if (answers['Espoir'] === q.answer && answers['Gloria'] === q.answer) {
+                            quizScore += 10;
+                            lovePoints += 10;
+                            sessionRef.child('quiz').update({ score: quizScore, lovePoints });
+                            resultEl.textContent = 'Cœurs en synchro ! +10 points d’amour 💖';
+                            if (scoreEl) scoreEl.textContent = quizScore;
+                            lovePointsEl.textContent = lovePoints;
+                            animateCounter(scoreEl, quizScore - 10, quizScore, 500);
+                            animateCounter(lovePointsEl, lovePoints - 10, lovePoints, 500);
+                            showHearts(40);
+                        } else {
+                            resultEl.textContent = 'Pas tout à fait, mais votre amour brille !';
+                        }
+                        submitAnswerBtn.classList.add('hidden');
+                        nextQuestionBtn.classList.remove('hidden');
+                    }
+                });
+            } else {
+                const q = questions[currentQuestion];
+                resultEl.classList.remove('hidden');
+                if (answer === q.answer) {
+                    quizScore += 10;
+                    lovePoints += 10;
+                    resultEl.textContent = 'Bonne réponse ! +10 points d’amour 💖';
+                    if (scoreEl) scoreEl.textContent = quizScore;
+                    lovePointsEl.textContent = lovePoints;
+                    animateCounter(scoreEl, quizScore - 10, quizScore, 500);
+                    animateCounter(lovePointsEl, lovePoints - 10, lovePoints, 500);
+                    showHearts(40);
+                } else {
+                    resultEl.textContent = 'Oups, essaie encore !';
+                }
+                submitAnswerBtn.classList.add('hidden');
+                nextQuestionBtn.classList.remove('hidden');
+            }
+        }
+
+        nextQuestionBtn.onclick = () => {
+            console.log("Passage à la question suivante");
+            if (firebaseInitialized && sessionRef) {
+                sessionRef.child('quiz').update({ currentQuestion: currentQuestion + 1, answers: {} });
+            } else {
+                currentQuestion++;
+                loadQuestion();
+            }
+        };
+
+        // Initialisation
+        renderChallenges();
+        if (!firebaseInitialized) {
+            initLocalSession();
+        }
+    </script>
+</body>
+</html>
